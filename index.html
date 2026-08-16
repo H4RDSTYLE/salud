@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observatorio de Salud de Castilla y León</title>
+<link rel="stylesheet" href="lib/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #map { background: #dfe9f1; }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div>Cargando datos del Portal de Datos Abiertos de Castilla y León…</div>
+</div>
+
+<header>
+  <div class="wrap">
+    <h1>Observatorio de Salud de <span>Castilla y León</span></h1>
+    <p>Mapa e indicadores sanitarios por Zona Básica de Salud a partir de datos abiertos de la Junta de Castilla y León: población de referencia, mortalidad, urgencias hospitalarias y prevalencias.</p>
+    <div class="fuentes">Fuentes: SACYL · datossanidad CytL · datosabiertos.jcyl.es (licencia CC BY 4.0) · API datos abiertos de análisis</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card">
+    <h2 id="anclajes">Conclusiones · números clave</h2>
+    <div class="concl" id="concl-salud"></div>
+    <div class="card-head">
+      <h2 style="margin-top:14px">Indicadores de presión asistencial por provincia <small>clic en cabeceras para ordenar</small></h2>
+      <button class="primary" id="csv-salud">Descargar CSV</button>
+    </div>
+    <div class="note">Indicadores por habitante según la población municipal publicada en el Registro de Municipios de Castilla y León. No se incluyen importes económicos por zona; la priorización es por presión asistencial.</div>
+    <div class="data-scroll">
+    <table class="data sortable" id="t-salud">
+      <thead><tr>
+        <th data-k="prov">Provincia</th>
+        <th data-k="pob" class="num">Población</th>
+        <th data-k="urg" class="num">Urgencias</th>
+        <th data-k="urgr" class="num">Urgencias/1000</th>
+        <th data-k="mort" class="num">Fallecidos</th>
+        <th data-k="mortr" class="num">Fallecidos/1000</th>
+        <th data-k="cs" class="num">Centros</th>
+        <th data-k="csr" class="num">Centros/100 k</th>
+      </tr></thead>
+      <tbody id="t-salud-body"></tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2 id="map-title">Mapa de Zonas Básicas de Salud <small>clic en una zona para más detalle</small></h2>
+      <div class="toolbar">
+        <label for="ind-chooser" style="font-size:.85rem;color:var(--muted)">Indicador</label>
+        <select id="ind-chooser">
+          <option value="poblacion">Población de referencia</option>
+          <option value="urgencias">Urgencias atendidas (2024/25)</option>
+          <option value="mortalidad">Fallecimientos (2021→2026)</option>
+        </select>
+        <label for="prov-filtro" style="font-size:.85rem;color:var(--muted)">Provincia</label>
+        <select id="prov-filtro"></select>
+        <button class="primary" id="btn-reset">Ver todo</button>
+      </div>
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card">
+      <h2>Detalle de zona</h2>
+      <div class="info-panel" id="info-panel">
+        <p style="color:var(--muted)">
+          Selecciona una zona básica de salud en el mapa para ver su información.
+        </p>
+      </div>
+      <div class="note" id="map-note"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Urgencias hospitalarias por mes <small>campaña 2024/25</small></h2>
+      <div class="chart" id="ch-urgencias-mes"></div>
+    </div>
+    <div class="card">
+      <h2>Urgencias por hospital <small>campaña 2024/25</small></h2>
+      <div class="chart tall" id="ch-urgencias-hospital"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Gasto sanitario ejecutado por año <small>presupuesto de la Junta de CyL</small></h2>
+      <div class="chart" id="ch-gasto-sanidad"></div>
+      <div class="note">Obligaciones reconocidas de la sección SANIDAD del presupuesto de gastos (ejecución). No se incluye 2025/2026 por tratarse de ejercicios incompletos.</div>
+    </div>
+    <div class="card">
+      <h2>Personal en instituciones sanitarias</h2>
+      <div class="chart mid" id="ch-personal"></div>
+      <div class="note">Efectivos de la Gerencia Regional de Salud publicados en estadísticas de personal. El total figura en los indicadores superiores.</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Fallecimientos mensuales en CyL <small>2022 → 2026</small></h2>
+      <div class="chart" id="ch-mortalidad"></div>
+    </div>
+    <div class="card">
+      <h2>Edad de las personas atendidas en urgencias <small>2024/25</small></h2>
+      <div class="chart" id="ch-urgencias-edad"></div>
+    </div>
+  </section>
+
+  <section class="grid row2">
+    <div class="card">
+      <h2>Nivel de triaje en urgencias <small>2024/25</small></h2>
+      <div class="chart" id="ch-triaje"></div>
+    </div>
+    <div class="card">
+      <h2>Pirámide de población de referencia <small>2026</small></h2>
+      <div class="chart" id="ch-piramide"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Pacientes activos registrados por patología <small>muestra por provincia</small></h2>
+      <div class="chart tall" id="ch-prevalencia"></div>
+    </div>
+    <div class="card">
+      <h2>Comparativa por provincia</h2>
+      <table class="data" id="tabla-prov"></table>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>FIchas de acceso a datos utilizados</h2>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:8px">
+        Conjuntos de datos del <a href="https://datosabiertos.jcyl.es" target="_blank">Portal de Datos Abiertos de la Junta de Castilla y León</a> usados en esta aplicación:
+      </p>
+      <ul id="ds-list" style="font-size:.85rem;margin-left:18px;color:var(--text)"></ul>
+    </div>
+    <div class="card">
+      <h2>Metodología y notas</h2>
+      <div style="font-size:.85rem;color:var(--text)">
+        <p><strong>Población de referencia:</strong> ciudadanos con derecho a asistencia sanitaria (tarjetas sanitarias individuales) registrados en el periodo. Los valores por zona son proporcionales al universo de tarjetas del fichero publicado.</p>
+        <p style="margin-top:8px"><strong>Mortalidad:</strong> fallecidos consolidados por centro de salud y fecha del registro de tasas de mortalidad.</p>
+        <p style="margin-top:8px"><strong>Urgencias:</strong> episodios de urgencia hospitalaria atendidos entre octubre de 2024 y septiembre de 2025.</p>
+        <p style="margin-top:8px"><strong>Prevalencias:</strong> pacientes con proceso activo en el momento de la descarga (muestra publicada), no tasas poblacionales.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Proyecto para el <a href="https://datosabiertos.jcyl.es/web/es/concurso-datos-abiertos/concurso-datos-abiertos.html" target="_blank">X Concurso de Datos Abiertos de Castilla y León</a>. Todos los datos son públicos y se descargan en tiempo de generación desde la API de <a href="https://analisis.datosabiertos.jcyl.es" target="_blank">Datos Abiertos de Castilla y León</a>.</p>
+  </div>
+</footer>
+
+<script src="lib/echarts.min.js"></script>
+<script src="lib/leaflet.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
