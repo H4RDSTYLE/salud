@@ -173,7 +173,12 @@ function initMap(D) {
     const r = Math.max(4, Math.min(14, Math.sqrt(+c.fallecidos || 1) * 1.4));
     L.circleMarker([c.lat, c.lon], {
       radius: r, color: "#08306b", weight: 1, fillColor: "#08519c", fillOpacity: 0.75,
-    }).bindTooltip(c.centro + " · " + fmt(c.fallecidos) + " fallecimientos").addTo(csLayer);
+    }).bindTooltip(c.centro + " · " + fmt(c.fallecidos) + " fallecimientos")
+      .on("click", () => {
+        const p = zonaEnPunto(c.lat, c.lon);
+        if (p) mostrarZona(p, D);
+      })
+      .addTo(csLayer);
   });
 
   indicadorActual = document.getElementById("ind-chooser").value;
@@ -257,6 +262,43 @@ function mostrarZona(props, D) {
     </table>`;
   document.getElementById("map-note").innerHTML =
     `Zona Básica de Salud con código ${cod}. Los indicadores provinciales se muestran para situar la zona en contexto.`;
+}
+
+/* Devuelve true si el punto (lon, lat) está dentro de un conjunto de anillos
+   GeoJSON (el primero es el contorno y el resto, agujeros). */
+function puntoEnPoligono(lon, lat, rings) {
+  const dentro = (ring) => {
+    let dentro = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if (((yi > lat) !== (yj > lat)) && (lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)) {
+        dentro = !dentro;
+      }
+    }
+    return dentro;
+  };
+  return dentro(rings[0]) && !rings.slice(1).some(dentro);
+}
+
+/* Busca la Zona Básica de Salud (feature de zbsLayer) que contiene el punto. */
+function zonaEnPunto(lat, lon) {
+  let found = null;
+  zbsLayer.eachLayer((l) => {
+    if (found || !l.feature || !l.feature.geometry) return;
+    const g = l.feature.geometry;
+    if (g.type === "Polygon") {
+      if (puntoEnPoligono(lon, lat, g.coordinates)) found = l.feature.properties;
+    } else if (g.type === "MultiPolygon") {
+      for (const poly of g.coordinates) {
+        if (puntoEnPoligono(lon, lat, poly)) {
+          found = l.feature.properties;
+          break;
+        }
+      }
+    }
+  });
+  return found;
 }
 
 /* ------------------------- Gráficos ------------------------- */
