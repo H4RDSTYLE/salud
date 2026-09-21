@@ -283,7 +283,7 @@ function initCharts(D) {
   mk("ch-urgencias-hospital", {
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v) => fmt(v) },
     grid: { left: 130, right: 90, top: 8, bottom: 20, containLabel: true },
-    xAxis: { type: "value", axisLabel: { formatter: (v) => fmt(v) } },
+    xAxis: { type: "value", interval: 100000, axisLabel: { formatter: (v) => fmt(v), hideOverlap: true } },
     yAxis: { type: "category", data: hosp.map((h) => h.hospital).reverse(), axisLabel: { width: 125, overflow: "truncate" } },
     series: [{ type: "bar", barMaxWidth: 22, data: hosp.map((h) => +h.n).reverse(), itemStyle: { color: "#1f8a4c" }, label: { show: true, position: "right", formatter: (p) => fmt(p.value), fontSize: 9 } }],
   });
